@@ -9,7 +9,7 @@ class MainWindow(QWidget):
         super(self.__class__, self).__init__()
         self.btnSet = []
         self.show()
-        self.initUI()
+        self.initUI() 
         self.setWindowTitle("2020 Opencvdl HW1")
         self.resize(600, 300)
 
