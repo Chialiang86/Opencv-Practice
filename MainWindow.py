@@ -111,8 +111,8 @@ class MainWindow(QWidget):
             picFileType = picFName.split('.')[-1]
             if picFileType == 'jpg' or picFileType == 'png' or picFileType == 'jpeg':
                 self.legal[0] = 1 # enable 1.2
-                print(picFName)
                 self.pic = cv2.imread(picFName)
+                print(picFName)
                 print('Height : ' + str(self.pic.shape[0]))
                 print('Width : ' + str(self.pic.shape[1]))
                 cv2.imshow('My Image', self.pic)
