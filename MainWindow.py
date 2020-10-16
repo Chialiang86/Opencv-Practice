@@ -1,4 +1,5 @@
 import sys, cv2
+import numpy as np
 
 from PyQt5.QtWidgets import QApplication, QLabel, QLineEdit , QWidget, QGridLayout, \
     QGroupBox, QPushButton, QVBoxLayout, QFileDialog
@@ -8,6 +9,9 @@ class MainWindow(QWidget):
     def __init__(self):
         super(self.__class__, self).__init__()
         self.btnSet = []
+        self.pic = None
+        self.legal = [0, 0, 0, 0, 0]
+
         self.show()
         self.initUI() 
         self.setWindowTitle("2020 Opencvdl HW1")
@@ -103,11 +107,55 @@ class MainWindow(QWidget):
         btn = self.sender()
         bid = btn.id
         if bid == '1.1':
-            directory1 = QFileDialog.getExistingDirectory(self,"選取資料夾","./")
-
-
-
+            picFName, fileType = QFileDialog.getOpenFileName(self,"選取檔案","./","Picture file (*.png *.jpg *.jpeg)")
+            picFileType = picFName.split('.')[-1]
+            if picFileType == 'jpg' or picFileType == 'png' or picFileType == 'jpeg':
+                self.legal[0] = 1 # enable 1.2
+                print(picFName)
+                self.pic = cv2.imread(picFName)
+                print('Height : ' + str(self.pic.shape[0]))
+                print('Width : ' + str(self.pic.shape[1]))
+                cv2.imshow('My Image', self.pic)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+        
+        elif bid == '1.2' and self.legal[0] > 0:
+            self.legal[0] = 2 
+            z = np.zeros((self.pic.shape[0], self.pic.shape[1]), dtype=self.pic.dtype)
+            b = np.zeros((self.pic.shape[0], self.pic.shape[1]), dtype=self.pic.dtype)
+            g = np.zeros((self.pic.shape[0], self.pic.shape[1]), dtype=self.pic.dtype)
+            r = np.zeros((self.pic.shape[0], self.pic.shape[1]), dtype=self.pic.dtype)
+            b[:,:] = self.pic[:,:,0]
+            g[:,:] = self.pic[:,:,1]
+            r[:,:] = self.pic[:,:,2]
+            bsep = cv2.merge([b, z, z])
+            gsep = cv2.merge([z, g, z])
+            rsep = cv2.merge([z, z, r])
+            rgbConcate = np.hstack((rsep, gsep, bsep))
+            print(rgbConcate.shape)
+            ratio1 = rgbConcate.shape[1] / 1200
+            ratio2 = self.pic.shape[1] / 600
+            rgbConcate = cv2.resize(rgbConcate, (int(rgbConcate.shape[1]/ratio1), int(rgbConcate.shape[0]/ratio1)))
+            resizedPic = cv2.resize(self.pic, (int(self.pic.shape[1]/ratio2), int(self.pic.shape[0]/ratio2)))
+            cv2.imshow("original", resizedPic)
+            cv2.imshow("Seperate", rgbConcate)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
     
+        elif bid == '1.3' and self.legal[0] > 0:
+            self.legal[0] = 2 
+            flipping = np.zeros((self.pic.shape[0],self.pic.shape[1],self.pic.shape[2]),dtype=self.pic.dtype)
+            wsize = self.pic.shape[1]
+            for i in range(wsize):
+                flipping[:,i,:] = self.pic[:,wsize - 1 - i,:]
+            
+            ratio = self.pic.shape[1] / 600
+            resizedPic = cv2.resize(self.pic, (int(self.pic.shape[1]/ratio), int(self.pic.shape[0]/ratio)))
+            resizedFlipping = cv2.resize(flipping, (int(flipping.shape[1]/ratio), int(flipping.shape[0]/ratio)))
+            cv2.imshow("original", resizedPic)
+            cv2.imshow("filpping", resizedFlipping)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
