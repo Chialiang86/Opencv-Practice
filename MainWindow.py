@@ -2,7 +2,7 @@ import sys, cv2
 import numpy as np
 
 from PyQt5.QtWidgets import QApplication, QLabel, QLineEdit , QWidget, QGridLayout, \
-    QGroupBox, QPushButton, QVBoxLayout, QFileDialog
+    QGroupBox, QPushButton, QVBoxLayout, QFileDialog, QMessageBox
 from ExtendedButton import ExtendedQPushButton
 
 class MainWindow(QWidget):
@@ -11,6 +11,8 @@ class MainWindow(QWidget):
         self.btnSet = []
         self.pic = None
         self.legal = [0, 0, 0, 0, 0]
+
+        self.__imgCache = [0, 0, 0, 0, 0, 0, 0, 0]
 
         self.show()
         self.initUI() 
@@ -63,9 +65,9 @@ class MainWindow(QWidget):
         grid.addWidget(self.createThreeGroup([self.loadImgBtn, self.ColorSepBtn, self.imgFlipBtn, self.BlendBtn], \
             gridTitle[0], btnIds[0]), 0, 0)
         grid.addWidget(self.createThreeGroup([self.midFilterBtn, self.gauBlur2Btn, self.bilateralBtn], \
-            gridTitle[0], btnIds[0]), 0, 1)
+            gridTitle[1], btnIds[1]), 0, 1)
         grid.addWidget(self.createThreeGroup([self.gauBlur3Btn,  self.sobelXBtn, self.sobelYBtn, self.magnitudeBtn], \
-            gridTitle[0], btnIds[0]), 0, 2)
+            gridTitle[2], btnIds[2]), 0, 2)
         grid.addWidget(self.createLastGroup(gridTitle[3]), 0, 3)
         self.setLayout(grid)
 
@@ -111,8 +113,8 @@ class MainWindow(QWidget):
             picFileType = picFName.split('.')[-1]
             if picFileType == 'jpg' or picFileType == 'png' or picFileType == 'jpeg':
                 self.legal[0] = 1 # enable 1.2
-                self.pic = cv2.imread(picFName)
-                print(picFName)
+                self.pic = cv2.imdecode(np.fromfile(picFName, dtype=np.uint8), 1)
+                print('type:' + str(type(self.pic)))
                 print('Height : ' + str(self.pic.shape[0]))
                 print('Width : ' + str(self.pic.shape[1]))
                 cv2.imshow('My Image', self.pic)
@@ -148,14 +150,59 @@ class MainWindow(QWidget):
             wsize = self.pic.shape[1]
             for i in range(wsize):
                 flipping[:,i,:] = self.pic[:,wsize - 1 - i,:]
-            
             ratio = self.pic.shape[1] / 600
             resizedPic = cv2.resize(self.pic, (int(self.pic.shape[1]/ratio), int(self.pic.shape[0]/ratio)))
             resizedFlipping = cv2.resize(flipping, (int(flipping.shape[1]/ratio), int(flipping.shape[0]/ratio)))
+            self.__imgCache[0] = resizedPic
+            self.__imgCache[1] = resizedFlipping
             cv2.imshow("original", resizedPic)
             cv2.imshow("filpping", resizedFlipping)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
+
+        elif bid == '1.4' and self.legal[0] > 1:
+            cv2.namedWindow('blending')
+            cv2.createTrackbar ( 'weight' , 'blending' , 0 , 255, self.__blendShow)
+            cv2.setTrackbarPos ( 'weight' , 'blending' , 128)
+
+
+        # blur
+        elif bid == '2.1' and self.legal[0] > 0:
+            midBlurImg = cv2.medianBlur(self.pic, 7)
+            cv2.imshow('original', self.pic)
+            cv2.imshow('median', midBlurImg)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+        elif bid == '2.2' and self.legal[0] > 0:
+            gauBlurImg = cv2.GaussianBlur(self.pic, (5,5), 0)
+            cv2.imshow('original', self.pic)
+            cv2.imshow('Gaussian', gauBlurImg)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+        elif bid == '2.3' and self.legal[0] > 0:
+            bilBlurImg = cv2.bilateralFilter(self.pic, 9, 90, 90)
+            cv2.imshow('original', self.pic)
+            cv2.imshow('bilateral', bilBlurImg)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+
+
+    def __illegalMsg():
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Warning)
+        msg.setText("This is a message box")
+        msg.setInformativeText("This is additional information")
+        msg.setWindowTitle("MessageBox demo")
+        msg.setDetailedText("The details are as follows:")
+        a = msg.show()
+
+        
+    def __blendShow(self, x):
+        dst = cv2.addWeighted(self.__imgCache[0], x / 255, self.__imgCache[1], (255 - x) / 255, 0.0)
+        cv2.imshow("blending", dst)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
