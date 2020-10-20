@@ -221,7 +221,7 @@ class MainWindow(QWidget):
         elif bid == '3.1' and self.legal[2] >= 1:
             self.legal[2] = 2
             grayImg = cv2.cvtColor(self.pic, cv2.COLOR_BGR2GRAY)
-            gauKernel = self.__gaussianKer(3)
+            gauKernel = self.__gaussianKer(7)
             gauBlur = signal.convolve2d(grayImg, gauKernel,  boundary='symm', mode='same')
             gauBlur = gauBlur.astype(np.uint8)
             self.__imgCache[0] = gauBlur
@@ -238,13 +238,13 @@ class MainWindow(QWidget):
             if self.legal[2] >= 2:
                 sobelKernel = self.__sobelKer('x')
                 sobelx = signal.convolve2d(self.__imgCache[0], sobelKernel,  boundary='symm', mode='same')
+                self.__imgCache[1] = sobelx
                 sobelx = np.abs(sobelx)
                 smin = sobelx.min()
                 smax = sobelx.max()
                 diff = smax - smin
                 sobelx = ((sobelx - smin) / diff) * 255
                 sobelx = sobelx.astype(np.uint8)
-                self.__imgCache[1] = sobelx
                 cv2.namedWindow('original',0)
                 cv2.startWindowThread()
                 cv2.namedWindow('Sobel X',0)
@@ -258,13 +258,13 @@ class MainWindow(QWidget):
             if self.legal[2] >= 2:
                 sobelKernel = self.__sobelKer('y')
                 sobely = signal.convolve2d(self.__imgCache[0], sobelKernel,  boundary='symm', mode='same')
+                self.__imgCache[2] = sobely
                 sobely = np.abs(sobely)
                 smin = sobely.min()
                 smax = sobely.max()
                 diff = smax - smin
                 sobely = ((sobely - smin) / diff) * 255
                 sobely = sobely.astype(np.uint8)
-                self.__imgCache[2] = sobely
                 cv2.namedWindow('original',0)
                 cv2.startWindowThread()
                 cv2.namedWindow('Sobel Y',0)
@@ -278,7 +278,6 @@ class MainWindow(QWidget):
             if self.legal[2] >= 2:
                 magnitude = np.sqrt(self.__imgCache[1] ** 2 + self.__imgCache[2] ** 2)
                 magnitude = ((magnitude - magnitude.min()) / (magnitude.max() - magnitude.min())) * 255
-                magnitude = np.abs(magnitude)
                 magnitude = magnitude.astype(np.uint8)
                 cv2.namedWindow('Magnitude',0)
                 cv2.startWindowThread() 
@@ -292,18 +291,24 @@ class MainWindow(QWidget):
                 scale = int(self.scaleText.text())
                 tx = int(self.TxText.text())
                 ty = int(self.TyText.text())
-                m = self.__M(rotate, tx, ty)
+                m = self.__M(rotate, scale, tx, ty)
+                print('size:' + str(self.pic.shape))
                 res = cv2.warpAffine(self.pic, m, (self.pic.shape[1] * scale, self.pic.shape[0] * scale ))
-                cv2.imshow('Transformation', res)
+                cv2.imshow('My Image', res)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
 
 
 
-    def __M(self, rot, tx, ty):
+    def __M(self, rot, scale, tx, ty):
+        center = (160, 84)
         cosx = math.cos(rot * math.pi / 180)
         sinx = math.sin(rot * math.pi / 180)
-        return np.array([[cosx, -sinx, tx], [sinx, cosx, ty]])
+        a = scale * cosx
+        b = scale * sinx
+        x = (1 - a) * center[0] - b * center[1]
+        y = b * center[0] + (1 - a) * center[1]
+        return np.array([[a, b, x], [-b, a, y]])
 
 
 
@@ -335,6 +340,19 @@ class MainWindow(QWidget):
         if dir == 'y':
             return np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
         return None
+
+
+
+    def __sumMax(self, sum):
+        index = 0
+        m = 0
+        for i in range(len(sum)):
+            if sum[i] > m:
+                m = sum[i]
+                index = i
+        return index, m
+
+
 
     def __conv2D(self, img, ker):
         dst = np.zeros(img.shape, dtype=img.dtype)
