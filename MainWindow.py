@@ -192,21 +192,64 @@ class MainWindow(QWidget):
             cv2.destroyAllWindows()
 
         #edge detect
-        elif bid == '3.1' and self.legal[2] > 0:
+        elif bid == '3.1' and self.legal[2] >= 1:
             self.legal[2] = 2
             grayImg = cv2.cvtColor(self.pic, cv2.COLOR_BGR2GRAY)
             gauKernel = self.__gaussianKer(3)
             gauBlur = signal.convolve2d(grayImg, gauKernel,  boundary='symm', mode='same')
             gauBlur = gauBlur.astype(np.uint8)
-            #gauBlur = self.__conv2D(grayImg, gauKernel)
+            self.__imgCache[0] = gauBlur
             cv2.imshow('original', grayImg)
             cv2.imshow('Gaussian', gauBlur)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
+        elif bid == '3.2' :
+            if self.legal[2] >= 2:
+                sobelKernel = self.__sobelKer('x')
+                sobelx = signal.convolve2d(self.__imgCache[0], sobelKernel,  boundary='symm', mode='same')
+                smin = sobelx.min()
+                smax = sobelx.max()
+                diff = smax - smin
+                sobelx = ((sobelx - smin) / diff) * 255
+                sobelx = sobelx.astype(np.uint8)
+                self.__imgCache[1] = sobelx
+                cv2.imshow('original', self.__imgCache[0])
+                cv2.imshow('Sobel X', sobelx)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+
+        elif bid == '3.3' :
+            if self.legal[2] >= 2:
+                sobelKernel = self.__sobelKer('y')
+                sobely = signal.convolve2d(self.__imgCache[0], sobelKernel,  boundary='symm', mode='same')
+                smin = sobely.min()
+                smax = sobely.max()
+                diff = smax - smin
+                sobely = ((sobely - smin) / diff) * 255
+                sobely = sobely.astype(np.uint8)
+                self.__imgCache[2] = sobely
+                cv2.imshow('original', self.__imgCache[0])
+                cv2.imshow('Sobel Y', sobely)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+
+        elif bid == '3.4' :
+            if self.legal[2] >= 2:
+                magnitude = np.sqrt(self.__imgCache[1] ** 2 + self.__imgCache[2] ** 2)
+                magnitude = ((magnitude - magnitude.min()) / (magnitude.max() - magnitude.min())) * 255
+                magnitude = magnitude.astype(np.uint8)
+                cv2.imshow('Magnitude', magnitude)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
 
 
-    def __illegalMsg():
+
+
+
+
+
+    def __illegalMsg(self):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Warning)
         msg.setText("This is a message box")
@@ -227,6 +270,13 @@ class MainWindow(QWidget):
         gnorm = np.exp(-(x**2 + y**2)) 
         gnorm = gnorm / gnorm.sum()
         return gnorm
+
+    def __sobelKer(self, dir):
+        if dir == 'x':
+            return np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
+        if dir == 'y':
+            return np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
+        return None
 
     def __conv2D(self, img, ker):
         dst = np.zeros(img.shape, dtype=img.dtype)
