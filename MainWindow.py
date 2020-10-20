@@ -1,7 +1,8 @@
 import sys, cv2
 import numpy as np
-from scipy import signal
+import math
 
+from scipy import signal
 from PyQt5.QtWidgets import QApplication, QLabel, QLineEdit , QWidget, QGridLayout, \
     QGroupBox, QPushButton, QVBoxLayout, QFileDialog, QMessageBox
 from ExtendedButton import ExtendedQPushButton
@@ -23,21 +24,21 @@ class MainWindow(QWidget):
     def initUI(self):
 
         #first
-        self.loadImgBtn = QPushButton('1.1 Load image')
-        self.ColorSepBtn = QPushButton('1.2 Color seperation')
-        self.imgFlipBtn = QPushButton('1.3 Image Flipping')
-        self.BlendBtn = QPushButton('1.4 Blending')
+        self.loadImgBtn = ExtendedQPushButton('1.1 Load image')
+        self.ColorSepBtn = ExtendedQPushButton('1.2 Color seperation')
+        self.imgFlipBtn = ExtendedQPushButton('1.3 Image Flipping')
+        self.BlendBtn = ExtendedQPushButton('1.4 Blending')
 
         #second
-        self.midFilterBtn = QPushButton('2.1 Medium Filter')
-        self.gauBlur2Btn = QPushButton('2.2 Gaussian Blur')
-        self.bilateralBtn = QPushButton('2.3 Bilateral')
+        self.midFilterBtn = ExtendedQPushButton('2.1 Medium Filter')
+        self.gauBlur2Btn = ExtendedQPushButton('2.2 Gaussian Blur')
+        self.bilateralBtn = ExtendedQPushButton('2.3 Bilateral')
 
         #third
-        self.gauBlur3Btn = QPushButton('3.1Gaussion Blur')
-        self.sobelXBtn = QPushButton('3.2 Sobel X')
-        self.sobelYBtn = QPushButton('3.3 Sobel Y')
-        self.magnitudeBtn = QPushButton('3.4 Magnitude')
+        self.gauBlur3Btn = ExtendedQPushButton('3.1Gaussion Blur')
+        self.sobelXBtn = ExtendedQPushButton('3.2 Sobel X')
+        self.sobelYBtn = ExtendedQPushButton('3.3 Sobel Y')
+        self.magnitudeBtn = ExtendedQPushButton('3.4 Magnitude')
 
         #last
         self.rotateLabel = QLabel('Rotation:', self)
@@ -54,7 +55,9 @@ class MainWindow(QWidget):
         self.TxUnitLabel = QLabel('pixel', self)
         self.TyUnitLabel = QLabel('pixel', self)
 
-        self.transformBtn = QPushButton('4.Transformation', self)
+        self.transformBtn = ExtendedQPushButton('4.Transformation')
+        self.transformBtn.id = '4.1'
+        self.transformBtn.clicked.connect(self.btnClickedHandler)
 
 
         grid = QGridLayout()
@@ -110,7 +113,7 @@ class MainWindow(QWidget):
         btn = self.sender()
         bid = btn.id
         if bid == '1.1':
-            picFName, fileType = QFileDialog.getOpenFileName(self,"選取檔案","./","Picture file (*.png *.jpg *.jpeg)")
+            picFName, fileType = QFileDialog.getOpenFileName(self,"選取檔案","./","Picture file (*.JPG *.png *.jpg *.jpeg)")
             picFileType = picFName.split('.')[-1]
             if picFileType == 'jpg' or picFileType == 'png' or picFileType == 'jpeg':
                 self.legal[0] = 1 # enable 1.2
@@ -275,12 +278,32 @@ class MainWindow(QWidget):
             if self.legal[2] >= 2:
                 magnitude = np.sqrt(self.__imgCache[1] ** 2 + self.__imgCache[2] ** 2)
                 magnitude = ((magnitude - magnitude.min()) / (magnitude.max() - magnitude.min())) * 255
+                magnitude = np.abs(magnitude)
                 magnitude = magnitude.astype(np.uint8)
                 cv2.namedWindow('Magnitude',0)
                 cv2.startWindowThread() 
                 cv2.imshow('Magnitude', magnitude)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
+
+        elif bid == '4.1' :
+            if self.legal[0] >= 1:
+                rotate = int(self.rotateText.text())
+                scale = int(self.scaleText.text())
+                tx = int(self.TxText.text())
+                ty = int(self.TyText.text())
+                m = self.__M(rotate, tx, ty)
+                res = cv2.warpAffine(self.pic, m, (self.pic.shape[1] * scale, self.pic.shape[0] * scale ))
+                cv2.imshow('Transformation', res)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+
+
+
+    def __M(self, rot, tx, ty):
+        cosx = math.cos(rot * math.pi / 180)
+        sinx = math.sin(rot * math.pi / 180)
+        return np.array([[cosx, -sinx, tx], [sinx, cosx, ty]])
 
 
 
