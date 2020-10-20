@@ -116,13 +116,16 @@ class MainWindow(QWidget):
                 self.legal[0] = 1 # enable 1.2
                 self.legal[1] = 1 # enable 2.1 - 2.3
                 self.legal[2] = 1 # enable 3.1
-                self.pic = cv2.imdecode(np.fromfile(picFName, dtype=np.uint8), 1)
+                self.pic = cv2.imread(picFName)
                 print('type:' + str(type(self.pic)))
                 print('Height : ' + str(self.pic.shape[0]))
                 print('Width : ' + str(self.pic.shape[1]))
+                cv2.namedWindow('My Image',0)
+                cv2.startWindowThread() 
                 cv2.imshow('My Image', self.pic)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
+                k = cv2.waitKey(0)
+                if k > 0:
+                    cv2.destroyAllWindows()
         
         elif bid == '1.2' and self.legal[0] > 0:
             self.legal[0] = 2 
@@ -142,6 +145,10 @@ class MainWindow(QWidget):
             ratio2 = self.pic.shape[1] / 600
             rgbConcate = cv2.resize(rgbConcate, (int(rgbConcate.shape[1]/ratio1), int(rgbConcate.shape[0]/ratio1)))
             resizedPic = cv2.resize(self.pic, (int(self.pic.shape[1]/ratio2), int(self.pic.shape[0]/ratio2)))
+            cv2.namedWindow('original',0)
+            cv2.startWindowThread()
+            cv2.namedWindow('Seperate',0)
+            cv2.startWindowThread() 
             cv2.imshow("original", resizedPic)
             cv2.imshow("Seperate", rgbConcate)
             cv2.waitKey(0)
@@ -158,8 +165,12 @@ class MainWindow(QWidget):
             resizedFlipping = cv2.resize(flipping, (int(flipping.shape[1]/ratio), int(flipping.shape[0]/ratio)))
             self.__imgCache[0] = resizedPic
             self.__imgCache[1] = resizedFlipping
+            cv2.namedWindow('original',0)
+            cv2.startWindowThread()
+            cv2.namedWindow('flipping',0)
+            cv2.startWindowThread() 
             cv2.imshow("original", resizedPic)
-            cv2.imshow("filpping", resizedFlipping)
+            cv2.imshow("flipping", resizedFlipping)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
@@ -171,7 +182,11 @@ class MainWindow(QWidget):
 
         # blur
         elif bid == '2.1' and self.legal[1] > 0:
-            midBlurImg = cv2.medianBlur(self.pic, 7)
+            midBlurImg = cv2.medianBlur(self.pic, 7) 
+            cv2.namedWindow('original',0)
+            cv2.startWindowThread()
+            cv2.namedWindow('median',0)
+            cv2.startWindowThread() 
             cv2.imshow('original', self.pic)
             cv2.imshow('median', midBlurImg)
             cv2.waitKey(0)
@@ -179,6 +194,10 @@ class MainWindow(QWidget):
 
         elif bid == '2.2' and self.legal[1] > 0:
             gauBlurImg = cv2.GaussianBlur(self.pic, (5,5), 0)
+            cv2.namedWindow('original',0)
+            cv2.startWindowThread()
+            cv2.namedWindow('Gaussian',0)
+            cv2.startWindowThread() 
             cv2.imshow('original', self.pic)
             cv2.imshow('Gaussian', gauBlurImg)
             cv2.waitKey(0)
@@ -186,6 +205,10 @@ class MainWindow(QWidget):
 
         elif bid == '2.3' and self.legal[1] > 0:
             bilBlurImg = cv2.bilateralFilter(self.pic, 9, 90, 90)
+            cv2.namedWindow('original',0)
+            cv2.startWindowThread()
+            cv2.namedWindow('bilateral',0)
+            cv2.startWindowThread() 
             cv2.imshow('original', self.pic)
             cv2.imshow('bilateral', bilBlurImg)
             cv2.waitKey(0)
@@ -199,6 +222,10 @@ class MainWindow(QWidget):
             gauBlur = signal.convolve2d(grayImg, gauKernel,  boundary='symm', mode='same')
             gauBlur = gauBlur.astype(np.uint8)
             self.__imgCache[0] = gauBlur
+            cv2.namedWindow('original',0)
+            cv2.startWindowThread()
+            cv2.namedWindow('Gaussian',0)
+            cv2.startWindowThread() 
             cv2.imshow('original', grayImg)
             cv2.imshow('Gaussian', gauBlur)
             cv2.waitKey(0)
@@ -208,12 +235,17 @@ class MainWindow(QWidget):
             if self.legal[2] >= 2:
                 sobelKernel = self.__sobelKer('x')
                 sobelx = signal.convolve2d(self.__imgCache[0], sobelKernel,  boundary='symm', mode='same')
+                sobelx = np.abs(sobelx)
                 smin = sobelx.min()
                 smax = sobelx.max()
                 diff = smax - smin
                 sobelx = ((sobelx - smin) / diff) * 255
                 sobelx = sobelx.astype(np.uint8)
                 self.__imgCache[1] = sobelx
+                cv2.namedWindow('original',0)
+                cv2.startWindowThread()
+                cv2.namedWindow('Sobel X',0)
+                cv2.startWindowThread() 
                 cv2.imshow('original', self.__imgCache[0])
                 cv2.imshow('Sobel X', sobelx)
                 cv2.waitKey(0)
@@ -223,12 +255,17 @@ class MainWindow(QWidget):
             if self.legal[2] >= 2:
                 sobelKernel = self.__sobelKer('y')
                 sobely = signal.convolve2d(self.__imgCache[0], sobelKernel,  boundary='symm', mode='same')
+                sobely = np.abs(sobely)
                 smin = sobely.min()
                 smax = sobely.max()
                 diff = smax - smin
                 sobely = ((sobely - smin) / diff) * 255
                 sobely = sobely.astype(np.uint8)
                 self.__imgCache[2] = sobely
+                cv2.namedWindow('original',0)
+                cv2.startWindowThread()
+                cv2.namedWindow('Sobel Y',0)
+                cv2.startWindowThread() 
                 cv2.imshow('original', self.__imgCache[0])
                 cv2.imshow('Sobel Y', sobely)
                 cv2.waitKey(0)
@@ -239,6 +276,8 @@ class MainWindow(QWidget):
                 magnitude = np.sqrt(self.__imgCache[1] ** 2 + self.__imgCache[2] ** 2)
                 magnitude = ((magnitude - magnitude.min()) / (magnitude.max() - magnitude.min())) * 255
                 magnitude = magnitude.astype(np.uint8)
+                cv2.namedWindow('Magnitude',0)
+                cv2.startWindowThread() 
                 cv2.imshow('Magnitude', magnitude)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
@@ -293,7 +332,7 @@ class MainWindow(QWidget):
         return dst
 
 
-    def __resetImgCache():
+    def __resetImgCache(self):
         self.__imgCache = [0, 0, 0, 0, 0, 0, 0, 0]
 
 if __name__ == "__main__":
