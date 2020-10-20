@@ -245,10 +245,6 @@ class MainWindow(QWidget):
 
 
 
-
-
-
-
     def __illegalMsg(self):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Warning)
