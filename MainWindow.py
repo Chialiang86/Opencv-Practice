@@ -206,7 +206,7 @@ class MainWindow(QWidget):
 
 
 
-    def __illegalMsg():
+    def __illegalMsg(self):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Warning)
         msg.setText("This is a message box")
