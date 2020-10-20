@@ -1,5 +1,6 @@
 import sys, cv2
 import numpy as np
+from scipy import signal
 
 from PyQt5.QtWidgets import QApplication, QLabel, QLineEdit , QWidget, QGridLayout, \
     QGroupBox, QPushButton, QVBoxLayout, QFileDialog, QMessageBox
@@ -113,6 +114,8 @@ class MainWindow(QWidget):
             picFileType = picFName.split('.')[-1]
             if picFileType == 'jpg' or picFileType == 'png' or picFileType == 'jpeg':
                 self.legal[0] = 1 # enable 1.2
+                self.legal[1] = 1 # enable 2.1 - 2.3
+                self.legal[2] = 1 # enable 3.1
                 self.pic = cv2.imdecode(np.fromfile(picFName, dtype=np.uint8), 1)
                 print('type:' + str(type(self.pic)))
                 print('Height : ' + str(self.pic.shape[0]))
@@ -167,24 +170,37 @@ class MainWindow(QWidget):
 
 
         # blur
-        elif bid == '2.1' and self.legal[0] > 0:
+        elif bid == '2.1' and self.legal[1] > 0:
             midBlurImg = cv2.medianBlur(self.pic, 7)
             cv2.imshow('original', self.pic)
             cv2.imshow('median', midBlurImg)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
-        elif bid == '2.2' and self.legal[0] > 0:
+        elif bid == '2.2' and self.legal[1] > 0:
             gauBlurImg = cv2.GaussianBlur(self.pic, (5,5), 0)
             cv2.imshow('original', self.pic)
             cv2.imshow('Gaussian', gauBlurImg)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
-        elif bid == '2.3' and self.legal[0] > 0:
+        elif bid == '2.3' and self.legal[1] > 0:
             bilBlurImg = cv2.bilateralFilter(self.pic, 9, 90, 90)
             cv2.imshow('original', self.pic)
             cv2.imshow('bilateral', bilBlurImg)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+        #edge detect
+        elif bid == '3.1' and self.legal[2] > 0:
+            self.legal[2] = 2
+            grayImg = cv2.cvtColor(self.pic, cv2.COLOR_BGR2GRAY)
+            gauKernel = self.__gaussianKer(3)
+            gauBlur = signal.convolve2d(grayImg, gauKernel,  boundary='symm', mode='same')
+            gauBlur = gauBlur.astype(np.uint8)
+            #gauBlur = self.__conv2D(grayImg, gauKernel)
+            cv2.imshow('original', grayImg)
+            cv2.imshow('Gaussian', gauBlur)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
@@ -203,6 +219,36 @@ class MainWindow(QWidget):
     def __blendShow(self, x):
         dst = cv2.addWeighted(self.__imgCache[0], x / 255, self.__imgCache[1], (255 - x) / 255, 0.0)
         cv2.imshow("blending", dst)
+
+    def __gaussianKer(self, size, sigma = np.sqrt(0.5)):
+        #gnit = (1 / (2 * np.pi * sigma**2)) * np.exp(-(x**2 + y**2))
+        half = size // 2
+        x, y = np.mgrid[-half : half + 1, -half : half + 1]
+        gnorm = np.exp(-(x**2 + y**2)) 
+        gnorm = gnorm / gnorm.sum()
+        return gnorm
+
+    def __conv2D(self, img, ker):
+        dst = np.zeros(img.shape, dtype=img.dtype)
+        bh = ker.shape[0] // 2
+        bw = ker.shape[1] // 2
+        ih = img.shape[0]
+        iw = img.shape[1]
+        kerSize = ker.shape[0] * ker.shape[1]
+        for i in range(bw, iw - bw):
+            for j in range(bh, ih - bh):
+                submatrix = img[i-bw:i+bw+1,j-bh:j+bh+1]
+                dst[i][j] = np.sum(submatrix * ker) / kerSize
+                print(str(i) + ' ' + str(j) + ' ' + str(sum))
+        dst[:bw,:] = img[:bw,:]
+        dst[iw-bw:,:] = img[iw-bw:,:]
+        dst[:,:bh] = img[:,:bh]
+        dst[:,ih-bh:] = img[:,ih-bh:]
+        return dst
+
+
+    def __resetImgCache():
+        self.__imgCache = [0, 0, 0, 0, 0, 0, 0, 0]
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
