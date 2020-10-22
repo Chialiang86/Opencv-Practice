@@ -15,6 +15,7 @@ class MainWindow(QWidget):
         self.legal = [0, 0, 0, 0, 0]
 
         self.__imgCache = [0, 0, 0, 0, 0, 0, 0, 0]
+        self.__imgCenter = np.array([160, 84])
 
         self.show()
         self.initUI() 
@@ -287,28 +288,39 @@ class MainWindow(QWidget):
 
         elif bid == '4.1' :
             if self.legal[0] >= 1:
-                rotate = int(self.rotateText.text())
-                scale = int(self.scaleText.text())
+                rotate = float(self.rotateText.text())
+                scale = float(self.scaleText.text())
                 tx = int(self.TxText.text())
                 ty = int(self.TyText.text())
-                m = self.__M(rotate, scale, tx, ty)
+                
                 print('size:' + str(self.pic.shape))
-                res = cv2.warpAffine(self.pic, m, (self.pic.shape[1] * scale, self.pic.shape[0] * scale ))
+
+                self.__imgCenter = self.__imgCenter + np.array([tx, ty])
+                h, w = self.pic.shape[:2]
+                center = (self.__imgCenter[0], self.__imgCenter[1])
+                
+                M = np.float32([[1, 0, tx],[0, 1, ty]])
+                res = cv2.warpAffine(self.pic, M, (w,h))
+                
+                M = self.__M(rotate, scale)
+                #M = cv2.getRotationMatrix2D(center, rotate, scale) 
+                res = cv2.warpAffine(res, M, (w, h))
+                
                 cv2.imshow('My Image', res)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
 
 
 
-    def __M(self, rot, scale, tx, ty):
-        center = (160, 84)
+    def __M(self, rot, scale):
+        center = (self.__imgCenter[0], self.__imgCenter[1])
         cosx = math.cos(rot * math.pi / 180)
         sinx = math.sin(rot * math.pi / 180)
         a = scale * cosx
         b = scale * sinx
         x = (1 - a) * center[0] - b * center[1]
         y = b * center[0] + (1 - a) * center[1]
-        return np.array([[a, b, x], [-b, a, y]])
+        return np.float32([[a, b, x], [-b, a, y]])
 
 
 
