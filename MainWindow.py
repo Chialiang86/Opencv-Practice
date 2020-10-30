@@ -1,79 +1,106 @@
 import sys, cv2
 import numpy as np
+import matplotlib._mathtext_data
 import math
 
 from scipy import signal
 from PyQt5.QtWidgets import QApplication, QLabel, QLineEdit , QWidget, QGridLayout, \
-    QGroupBox, QPushButton, QVBoxLayout, QFileDialog, QMessageBox
+    QGroupBox, QPushButton, QVBoxLayout, QFileDialog, QMessageBox, QSpinBox
 from ExtendedButton import ExtendedQPushButton
+from VGG16 import VGG
 
 class MainWindow(QWidget):
     def __init__(self):
         super(self.__class__, self).__init__()
         self.btnSet = []
         self.pic = None
-        self.legal = [0, 0, 0, 0, 0]
+        self.legal = [0] * 4
 
-        self.__imgCache = [0, 0, 0, 0, 0, 0, 0, 0]
+        self.__imgCache = [0] * 8
         self.__imgCenter = np.array([160, 84])
+        self.__model = 0
 
         self.show()
         self.initUI() 
         self.setWindowTitle("2020 Opencvdl HW1")
-        self.resize(600, 300)
+        self.resize(900, 400)
 
     def initUI(self):
 
         #first
-        self.loadImgBtn = ExtendedQPushButton('1.1 Load image')
-        self.ColorSepBtn = ExtendedQPushButton('1.2 Color seperation')
-        self.imgFlipBtn = ExtendedQPushButton('1.3 Image Flipping')
-        self.BlendBtn = ExtendedQPushButton('1.4 Blending')
+        self.__loadImgBtn = ExtendedQPushButton('1.1 Load image')
+        self.__ColorSepBtn = ExtendedQPushButton('1.2 Color seperation')
+        self.__imgFlipBtn = ExtendedQPushButton('1.3 Image Flipping')
+        self.__BlendBtn = ExtendedQPushButton('1.4 Blending')
 
         #second
-        self.midFilterBtn = ExtendedQPushButton('2.1 Medium Filter')
-        self.gauBlur2Btn = ExtendedQPushButton('2.2 Gaussian Blur')
-        self.bilateralBtn = ExtendedQPushButton('2.3 Bilateral')
+        self.__midFilterBtn = ExtendedQPushButton('2.1 Medium Filter')
+        self.__gauBlur2Btn = ExtendedQPushButton('2.2 Gaussian Blur')
+        self.__bilateralBtn = ExtendedQPushButton('2.3 Bilateral')
 
         #third
-        self.gauBlur3Btn = ExtendedQPushButton('3.1Gaussion Blur')
-        self.sobelXBtn = ExtendedQPushButton('3.2 Sobel X')
-        self.sobelYBtn = ExtendedQPushButton('3.3 Sobel Y')
-        self.magnitudeBtn = ExtendedQPushButton('3.4 Magnitude')
+        self.__gauBlur3Btn = ExtendedQPushButton('3.1Gaussion Blur')
+        self.__sobelXBtn = ExtendedQPushButton('3.2 Sobel X')
+        self.__sobelYBtn = ExtendedQPushButton('3.3 Sobel Y')
+        self.__magnitudeBtn = ExtendedQPushButton('3.4 Magnitude')
 
-        #last
-        self.rotateLabel = QLabel('Rotation:', self)
-        self.scaleLabel = QLabel('Scaling:', self)
-        self.TxLabel = QLabel('Tx:', self)
-        self.TyLabel = QLabel('Ty:', self)
+        #fourth
+        self.__rotateLabel = QLabel('Rotation:', self)
+        self.__scaleLabel = QLabel('Scaling:', self)
+        self.__TxLabel = QLabel('Tx:', self)
+        self.__TyLabel = QLabel('Ty:', self)
 
-        self.rotateText = QLineEdit(self)
-        self.scaleText = QLineEdit(self)
-        self.TxText = QLineEdit(self)
-        self.TyText = QLineEdit(self)
+        self.__rotateText = QLineEdit(self)
+        self.__scaleText = QLineEdit(self)
+        self.__TxText = QLineEdit(self)
+        self.__TyText = QLineEdit(self)
 
-        self.rotUnitLabel = QLabel('deg', self)
-        self.TxUnitLabel = QLabel('pixel', self)
-        self.TyUnitLabel = QLabel('pixel', self)
+        self.__rotUnitLabel = QLabel('deg', self)
+        self.__TxUnitLabel = QLabel('pixel', self)
+        self.__TyUnitLabel = QLabel('pixel', self)
 
-        self.transformBtn = ExtendedQPushButton('4.Transformation')
-        self.transformBtn.id = '4.1'
-        self.transformBtn.clicked.connect(self.btnClickedHandler)
+        self.__transformBtn = ExtendedQPushButton('4.Transformation')
+        self.__transformBtn.id = '4.1'
+        self.__transformBtn.clicked.connect(self.btnClickedHandler)
 
+        #fifth
+        self.__showImgBtn = ExtendedQPushButton('1.Show Train Images')
+        self.__showHyperParamBtn = ExtendedQPushButton('2.Show Hyperparameters')
+        self.__showModelStrucBtn = ExtendedQPushButton('3.Show Model Structure')
+        self.__showAccBtn = ExtendedQPushButton('4.Show Accuracy')
+        self.__testImgIndex = QSpinBox()
+        self.__testBtn = ExtendedQPushButton('5.test')
+
+        self.__showImgBtn.id = '5.1'
+        self.__showHyperParamBtn.id = '5.2'
+        self.__showModelStrucBtn.id = '5.3'
+        self.__showAccBtn.id = '5.4'
+        self.__testBtn.id = '5.5'
+
+        self.__testImgIndex.setMinimum(0)
+        self.__testImgIndex.setMaximum(9999)
+        self.__testImgIndex.setValue(1000)
+
+        self.__showImgBtn.clicked.connect(self.btnClickedHandler)
+        self.__showHyperParamBtn.clicked.connect(self.btnClickedHandler)
+        self.__showModelStrucBtn.clicked.connect(self.btnClickedHandler)
+        self.__showAccBtn.clicked.connect(self.btnClickedHandler)
+        self.__testBtn.clicked.connect(self.btnClickedHandler)
 
         grid = QGridLayout()
-        gridTitle = ['1.Image Processing', '2.Image Smoothing', '3.Edge Detection', '4.Transformation']
+        gridTitle = ['1.Image Processing', '2.Image Smoothing', '3.Edge Detection', '4.Transformation', '5.VGG16 test']
         
         btnIds = [['1.1', '1.2', '1.3', '1.4'],
         ['2.1', '2.2', '2.3'],
         ['3.1', '3.2', '3.3', '3.4']]
-        grid.addWidget(self.createThreeGroup([self.loadImgBtn, self.ColorSepBtn, self.imgFlipBtn, self.BlendBtn], \
+        grid.addWidget(self.createThreeGroup([self.__loadImgBtn, self.__ColorSepBtn, self.__imgFlipBtn, self.__BlendBtn], \
             gridTitle[0], btnIds[0]), 0, 0)
-        grid.addWidget(self.createThreeGroup([self.midFilterBtn, self.gauBlur2Btn, self.bilateralBtn], \
+        grid.addWidget(self.createThreeGroup([self.__midFilterBtn, self.__gauBlur2Btn, self.__bilateralBtn], \
             gridTitle[1], btnIds[1]), 0, 1)
-        grid.addWidget(self.createThreeGroup([self.gauBlur3Btn,  self.sobelXBtn, self.sobelYBtn, self.magnitudeBtn], \
+        grid.addWidget(self.createThreeGroup([self.__gauBlur3Btn,  self.__sobelXBtn, self.__sobelYBtn, self.__magnitudeBtn], \
             gridTitle[2], btnIds[2]), 0, 2)
-        grid.addWidget(self.createLastGroup(gridTitle[3]), 0, 3)
+        grid.addWidget(self.create4Group(gridTitle[3]), 0, 3)
+        grid.addWidget(self.create5Group(gridTitle[3]), 0, 4)
         self.setLayout(grid)
 
     def createThreeGroup(self, button, title, ids):
@@ -90,25 +117,38 @@ class MainWindow(QWidget):
 
         return groupBox
 
-    def createLastGroup(self, title):
+    def create4Group(self, title):
         groupBox = QGroupBox(title)
 
         grid = QGridLayout()
-        grid.addWidget(self.rotateLabel, 0, 0, 1, 1)
-        grid.addWidget(self.scaleLabel, 1, 0, 1, 1)
-        grid.addWidget(self.TxLabel, 2, 0, 1, 1)
-        grid.addWidget(self.TyLabel, 3, 0, 1, 1)
-        grid.addWidget(self.rotateText, 0, 1, 1, 1)
-        grid.addWidget(self.scaleText, 1, 1, 1, 1)
-        grid.addWidget(self.TxText, 2, 1, 1, 1)
-        grid.addWidget(self.TyText, 3, 1, 1, 1)
-        grid.addWidget(self.rotUnitLabel, 0, 2, 1, 1)
-        grid.addWidget(self.TxUnitLabel, 2, 2, 1, 1)
-        grid.addWidget(self.TyUnitLabel, 3, 2, 1, 1)
-        grid.addWidget(self.transformBtn, 4, 0, 1, 3)
+        grid.addWidget(self.__rotateLabel, 0, 0, 1, 1)
+        grid.addWidget(self.__scaleLabel, 1, 0, 1, 1)
+        grid.addWidget(self.__TxLabel, 2, 0, 1, 1)
+        grid.addWidget(self.__TyLabel, 3, 0, 1, 1)
+        grid.addWidget(self.__rotateText, 0, 1, 1, 1)
+        grid.addWidget(self.__scaleText, 1, 1, 1, 1)
+        grid.addWidget(self.__TxText, 2, 1, 1, 1)
+        grid.addWidget(self.__TyText, 3, 1, 1, 1)
+        grid.addWidget(self.__rotUnitLabel, 0, 2, 1, 1)
+        grid.addWidget(self.__TxUnitLabel, 2, 2, 1, 1)
+        grid.addWidget(self.__TyUnitLabel, 3, 2, 1, 1)
+        grid.addWidget(self.__transformBtn, 4, 0, 1, 3)
         groupBox.setLayout(grid)
-
         return groupBox
+
+    def create5Group(self, title):
+        groupBox = QGroupBox(title)
+        grid = QGridLayout()
+
+        grid.addWidget(self.__showImgBtn, 0, 0, 1, 1)
+        grid.addWidget(self.__showHyperParamBtn, 1, 0, 1, 1)
+        grid.addWidget(self.__showModelStrucBtn, 2, 0, 1, 1)
+        grid.addWidget(self.__showAccBtn, 3, 0, 1, 1)
+        grid.addWidget(self.__testImgIndex, 4, 0, 1, 1)
+        grid.addWidget(self.__testBtn, 5, 0, 1, 1)
+        groupBox.setLayout(grid)
+        return groupBox
+        
 
     def btnClickedHandler(self):
         btn = self.sender()
@@ -118,14 +158,13 @@ class MainWindow(QWidget):
             picFileType = picFName.split('.')[-1]
             if picFileType == 'jpg' or picFileType == 'png' or picFileType == 'jpeg':
                 self.legal[0] = 1 # enable 1.2
-                self.legal[1] = 1 # enable 2.1 - 2.3
-                self.legal[2] = 1 # enable 3.1
+                self.legal[1] = 1 # enable 1.2
+                self.legal[2] = 1 # enable 1.2
                 self.pic = cv2.imread(picFName)
+                self.__imgCenter = np.array([160, 84])
                 print('type:' + str(type(self.pic)))
                 print('Height : ' + str(self.pic.shape[0]))
                 print('Width : ' + str(self.pic.shape[1]))
-                cv2.namedWindow('My Image',0)
-                cv2.startWindowThread() 
                 cv2.imshow('My Image', self.pic)
                 k = cv2.waitKey(0)
                 if k > 0:
@@ -144,15 +183,10 @@ class MainWindow(QWidget):
             gsep = cv2.merge([z, g, z])
             rsep = cv2.merge([z, z, r])
             rgbConcate = np.hstack((rsep, gsep, bsep))
-            print(rgbConcate.shape)
             ratio1 = rgbConcate.shape[1] / 1200
             ratio2 = self.pic.shape[1] / 600
             rgbConcate = cv2.resize(rgbConcate, (int(rgbConcate.shape[1]/ratio1), int(rgbConcate.shape[0]/ratio1)))
             resizedPic = cv2.resize(self.pic, (int(self.pic.shape[1]/ratio2), int(self.pic.shape[0]/ratio2)))
-            cv2.namedWindow('original',0)
-            cv2.startWindowThread()
-            cv2.namedWindow('Seperate',0)
-            cv2.startWindowThread() 
             cv2.imshow("original", resizedPic)
             cv2.imshow("Seperate", rgbConcate)
             cv2.waitKey(0)
@@ -164,17 +198,10 @@ class MainWindow(QWidget):
             wsize = self.pic.shape[1]
             for i in range(wsize):
                 flipping[:,i,:] = self.pic[:,wsize - 1 - i,:]
-            ratio = self.pic.shape[1] / 600
-            resizedPic = cv2.resize(self.pic, (int(self.pic.shape[1]/ratio), int(self.pic.shape[0]/ratio)))
-            resizedFlipping = cv2.resize(flipping, (int(flipping.shape[1]/ratio), int(flipping.shape[0]/ratio)))
-            self.__imgCache[0] = resizedPic
-            self.__imgCache[1] = resizedFlipping
-            cv2.namedWindow('original',0)
-            cv2.startWindowThread()
-            cv2.namedWindow('flipping',0)
-            cv2.startWindowThread() 
-            cv2.imshow("original", resizedPic)
-            cv2.imshow("flipping", resizedFlipping)
+            self.__imgCache[0] = self.pic
+            self.__imgCache[1] = flipping
+            cv2.imshow("original", self.pic)
+            cv2.imshow("flipping", flipping)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
@@ -182,15 +209,13 @@ class MainWindow(QWidget):
             cv2.namedWindow('blending')
             cv2.createTrackbar ( 'weight' , 'blending' , 0 , 255, self.__blendShow)
             cv2.setTrackbarPos ( 'weight' , 'blending' , 128)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
 
         # blur
         elif bid == '2.1' and self.legal[1] > 0:
             midBlurImg = cv2.medianBlur(self.pic, 7) 
-            cv2.namedWindow('original',0)
-            cv2.startWindowThread()
-            cv2.namedWindow('median',0)
-            cv2.startWindowThread() 
             cv2.imshow('original', self.pic)
             cv2.imshow('median', midBlurImg)
             cv2.waitKey(0)
@@ -198,10 +223,6 @@ class MainWindow(QWidget):
 
         elif bid == '2.2' and self.legal[1] > 0:
             gauBlurImg = cv2.GaussianBlur(self.pic, (5,5), 0)
-            cv2.namedWindow('original',0)
-            cv2.startWindowThread()
-            cv2.namedWindow('Gaussian',0)
-            cv2.startWindowThread() 
             cv2.imshow('original', self.pic)
             cv2.imshow('Gaussian', gauBlurImg)
             cv2.waitKey(0)
@@ -209,10 +230,6 @@ class MainWindow(QWidget):
 
         elif bid == '2.3' and self.legal[1] > 0:
             bilBlurImg = cv2.bilateralFilter(self.pic, 9, 90, 90)
-            cv2.namedWindow('original',0)
-            cv2.startWindowThread()
-            cv2.namedWindow('bilateral',0)
-            cv2.startWindowThread() 
             cv2.imshow('original', self.pic)
             cv2.imshow('bilateral', bilBlurImg)
             cv2.waitKey(0)
@@ -226,10 +243,6 @@ class MainWindow(QWidget):
             gauBlur = signal.convolve2d(grayImg, gauKernel,  boundary='symm', mode='same')
             gauBlur = gauBlur.astype(np.uint8)
             self.__imgCache[0] = gauBlur
-            cv2.namedWindow('original',0)
-            cv2.startWindowThread()
-            cv2.namedWindow('Gaussian',0)
-            cv2.startWindowThread() 
             cv2.imshow('original', grayImg)
             cv2.imshow('Gaussian', gauBlur)
             cv2.waitKey(0)
@@ -246,10 +259,6 @@ class MainWindow(QWidget):
                 diff = smax - smin
                 sobelx = ((sobelx - smin) / diff) * 255
                 sobelx = sobelx.astype(np.uint8)
-                cv2.namedWindow('original',0)
-                cv2.startWindowThread()
-                cv2.namedWindow('Sobel X',0)
-                cv2.startWindowThread() 
                 cv2.imshow('original', self.__imgCache[0])
                 cv2.imshow('Sobel X', sobelx)
                 cv2.waitKey(0)
@@ -266,10 +275,6 @@ class MainWindow(QWidget):
                 diff = smax - smin
                 sobely = ((sobely - smin) / diff) * 255
                 sobely = sobely.astype(np.uint8)
-                cv2.namedWindow('original',0)
-                cv2.startWindowThread()
-                cv2.namedWindow('Sobel Y',0)
-                cv2.startWindowThread() 
                 cv2.imshow('original', self.__imgCache[0])
                 cv2.imshow('Sobel Y', sobely)
                 cv2.waitKey(0)
@@ -280,20 +285,16 @@ class MainWindow(QWidget):
                 magnitude = np.sqrt(self.__imgCache[1] ** 2 + self.__imgCache[2] ** 2)
                 magnitude = ((magnitude - magnitude.min()) / (magnitude.max() - magnitude.min())) * 255
                 magnitude = magnitude.astype(np.uint8)
-                cv2.namedWindow('Magnitude',0)
-                cv2.startWindowThread() 
                 cv2.imshow('Magnitude', magnitude)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
 
         elif bid == '4.1' :
             if self.legal[0] >= 1:
-                rotate = float(self.rotateText.text())
-                scale = float(self.scaleText.text())
-                tx = int(self.TxText.text())
-                ty = int(self.TyText.text())
-                
-                print('size:' + str(self.pic.shape))
+                rotate = float(self.__rotateText.text())
+                scale = float(self.__scaleText.text())
+                tx = int(self.__TxText.text())
+                ty = int(self.__TyText.text())
 
                 self.__imgCenter = self.__imgCenter + np.array([tx, ty])
                 h, w = self.pic.shape[:2]
@@ -303,12 +304,25 @@ class MainWindow(QWidget):
                 res = cv2.warpAffine(self.pic, M, (w,h))
                 
                 M = self.__M(rotate, scale)
-                #M = cv2.getRotationMatrix2D(center, rotate, scale) 
                 res = cv2.warpAffine(res, M, (w, h))
+                self.pic = res
                 
                 cv2.imshow('My Image', res)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
+        
+        elif bid == '5.1':
+            print('model create')
+            self.__model = VGG()
+            self.__model.showTrainImg()
+
+        elif bid == '5.3':
+            self.__model.buildModel()
+            self.__model.printSummary()
+            self.__model.setOneHotEncode()
+
+        elif bid == '5.4':
+            self.__model.train()
 
 
 
@@ -386,7 +400,7 @@ class MainWindow(QWidget):
 
 
     def __resetImgCache(self):
-        self.__imgCache = [0, 0, 0, 0, 0, 0, 0, 0]
+        self.__imgCache = [0] * 8
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
