@@ -14,7 +14,7 @@ class MainWindow(QWidget):
         super(self.__class__, self).__init__()
         self.btnSet = []
         self.pic = None
-        self.legal = [0] * 4
+        self.legal = [0] * 5
 
         self.__imgCache = [0] * 8
         self.__imgCenter = np.array([160, 84])
@@ -23,7 +23,11 @@ class MainWindow(QWidget):
         self.show()
         self.initUI() 
         self.setWindowTitle("2020 Opencvdl HW1")
-        self.resize(900, 400)
+        self.resize(800, 400)
+
+        self.__msg = QMessageBox()
+        self.__msg.setIcon(QMessageBox.Warning)
+        self.__msg.setWindowTitle("Oops!!!!")
 
     def initUI(self):
 
@@ -50,10 +54,10 @@ class MainWindow(QWidget):
         self.__TxLabel = QLabel('Tx:', self)
         self.__TyLabel = QLabel('Ty:', self)
 
-        self.__rotateText = QLineEdit(self)
-        self.__scaleText = QLineEdit(self)
-        self.__TxText = QLineEdit(self)
-        self.__TyText = QLineEdit(self)
+        self.__rotateText = QLineEdit('30', self)
+        self.__scaleText = QLineEdit('0.9', self)
+        self.__TxText = QLineEdit('200', self)
+        self.__TyText = QLineEdit('300', self)
 
         self.__rotUnitLabel = QLabel('deg', self)
         self.__TxUnitLabel = QLabel('pixel', self)
@@ -100,7 +104,7 @@ class MainWindow(QWidget):
         grid.addWidget(self.createThreeGroup([self.__gauBlur3Btn,  self.__sobelXBtn, self.__sobelYBtn, self.__magnitudeBtn], \
             gridTitle[2], btnIds[2]), 0, 2)
         grid.addWidget(self.create4Group(gridTitle[3]), 0, 3)
-        grid.addWidget(self.create5Group(gridTitle[3]), 0, 4)
+        grid.addWidget(self.create5Group(gridTitle[4]), 0, 4)
         self.setLayout(grid)
 
     def createThreeGroup(self, button, title, ids):
@@ -119,7 +123,6 @@ class MainWindow(QWidget):
 
     def create4Group(self, title):
         groupBox = QGroupBox(title)
-
         grid = QGridLayout()
         grid.addWidget(self.__rotateLabel, 0, 0, 1, 1)
         grid.addWidget(self.__scaleLabel, 1, 0, 1, 1)
@@ -139,7 +142,6 @@ class MainWindow(QWidget):
     def create5Group(self, title):
         groupBox = QGroupBox(title)
         grid = QGridLayout()
-
         grid.addWidget(self.__showImgBtn, 0, 0, 1, 1)
         grid.addWidget(self.__showHyperParamBtn, 1, 0, 1, 1)
         grid.addWidget(self.__showModelStrucBtn, 2, 0, 1, 1)
@@ -148,7 +150,6 @@ class MainWindow(QWidget):
         grid.addWidget(self.__testBtn, 5, 0, 1, 1)
         groupBox.setLayout(grid)
         return groupBox
-        
 
     def btnClickedHandler(self):
         btn = self.sender()
@@ -157,9 +158,7 @@ class MainWindow(QWidget):
             picFName, fileType = QFileDialog.getOpenFileName(self,"選取檔案","./","Picture file (*.JPG *.png *.jpg *.jpeg)")
             picFileType = picFName.split('.')[-1]
             if picFileType == 'jpg' or picFileType == 'png' or picFileType == 'jpeg':
-                self.legal[0] = 1 # enable 1.2
-                self.legal[1] = 1 # enable 1.2
-                self.legal[2] = 1 # enable 1.2
+                self.legal = [1, 1, 1, 1, 0]
                 self.pic = cv2.imread(picFName)
                 self.__imgCenter = np.array([160, 84])
                 print('type:' + str(type(self.pic)))
@@ -170,86 +169,112 @@ class MainWindow(QWidget):
                 if k > 0:
                     cv2.destroyAllWindows()
         
-        elif bid == '1.2' and self.legal[0] > 0:
-            self.legal[0] = 2 
-            z = np.zeros((self.pic.shape[0], self.pic.shape[1]), dtype=self.pic.dtype)
-            b = np.zeros((self.pic.shape[0], self.pic.shape[1]), dtype=self.pic.dtype)
-            g = np.zeros((self.pic.shape[0], self.pic.shape[1]), dtype=self.pic.dtype)
-            r = np.zeros((self.pic.shape[0], self.pic.shape[1]), dtype=self.pic.dtype)
-            b[:,:] = self.pic[:,:,0]
-            g[:,:] = self.pic[:,:,1]
-            r[:,:] = self.pic[:,:,2]
-            bsep = cv2.merge([b, z, z])
-            gsep = cv2.merge([z, g, z])
-            rsep = cv2.merge([z, z, r])
-            rgbConcate = np.hstack((rsep, gsep, bsep))
-            ratio1 = rgbConcate.shape[1] / 1200
-            ratio2 = self.pic.shape[1] / 600
-            rgbConcate = cv2.resize(rgbConcate, (int(rgbConcate.shape[1]/ratio1), int(rgbConcate.shape[0]/ratio1)))
-            resizedPic = cv2.resize(self.pic, (int(self.pic.shape[1]/ratio2), int(self.pic.shape[0]/ratio2)))
-            cv2.imshow("original", resizedPic)
-            cv2.imshow("Seperate", rgbConcate)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+        elif bid == '1.2':
+            if self.legal[0] >= 1:
+                self.legal[0] = 2 if self.legal[0] > 2 else self.legal[0]
+                z = np.zeros((self.pic.shape[0], self.pic.shape[1]), dtype=self.pic.dtype)
+                b = np.zeros((self.pic.shape[0], self.pic.shape[1]), dtype=self.pic.dtype)
+                g = np.zeros((self.pic.shape[0], self.pic.shape[1]), dtype=self.pic.dtype)
+                r = np.zeros((self.pic.shape[0], self.pic.shape[1]), dtype=self.pic.dtype)
+                b[:,:] = self.pic[:,:,0]
+                g[:,:] = self.pic[:,:,1]
+                r[:,:] = self.pic[:,:,2]
+                bsep = cv2.merge([b, z, z])
+                gsep = cv2.merge([z, g, z])
+                rsep = cv2.merge([z, z, r])
+                cv2.imshow("original", self.pic)
+                cv2.imshow("red", rsep)
+                cv2.imshow("ged", gsep)
+                cv2.imshow("bed", bsep)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+            else: 
+                self.__msg.setText("1.1 should be done first!")
+                self.__msg.exec_()
     
-        elif bid == '1.3' and self.legal[0] > 0:
-            self.legal[0] = 2 
-            flipping = np.zeros((self.pic.shape[0],self.pic.shape[1],self.pic.shape[2]),dtype=self.pic.dtype)
-            wsize = self.pic.shape[1]
-            for i in range(wsize):
-                flipping[:,i,:] = self.pic[:,wsize - 1 - i,:]
-            self.__imgCache[0] = self.pic
-            self.__imgCache[1] = flipping
-            cv2.imshow("original", self.pic)
-            cv2.imshow("flipping", flipping)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+        elif bid == '1.3':
+            if self.legal[0] >= 1:
+                self.legal[0] = 3 
+                flipping = np.zeros((self.pic.shape[0],self.pic.shape[1],self.pic.shape[2]),dtype=self.pic.dtype)
+                wsize = self.pic.shape[1]
+                for i in range(wsize):
+                    flipping[:,i,:] = self.pic[:,wsize - 1 - i,:]
+                self.__imgCache[0] = self.pic
+                self.__imgCache[1] = flipping
+                cv2.imshow("original", self.pic)
+                cv2.imshow("flipping", flipping)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+            else: 
+                self.__msg.setText("1.1 should be done first!")
+                self.__msg.exec_()
 
-        elif bid == '1.4' and self.legal[0] > 1:
-            cv2.namedWindow('blending')
-            cv2.createTrackbar ( 'weight' , 'blending' , 0 , 255, self.__blendShow)
-            cv2.setTrackbarPos ( 'weight' , 'blending' , 128)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+        elif bid == '1.4' :
+            if self.legal[0] >= 3:
+                cv2.namedWindow('blending')
+                cv2.createTrackbar ( 'weight' , 'blending' , 0 , 255, self.__blendShow)
+                cv2.setTrackbarPos ( 'weight' , 'blending' , 128)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+            else: 
+                self.__msg.setText("1.3 should be done first!")
+                self.__msg.exec_()
 
 
         # blur
-        elif bid == '2.1' and self.legal[1] > 0:
-            midBlurImg = cv2.medianBlur(self.pic, 7) 
-            cv2.imshow('original', self.pic)
-            cv2.imshow('median', midBlurImg)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+        elif bid == '2.1':
+            if self.legal[1] >= 1:
+                midBlurImg = cv2.medianBlur(self.pic, 7) 
+                cv2.imshow('original', self.pic)
+                cv2.imshow('median', midBlurImg)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+            else: 
+                self.__msg.setText("1.1 should be done first!")
+                self.__msg.exec_()
 
-        elif bid == '2.2' and self.legal[1] > 0:
-            gauBlurImg = cv2.GaussianBlur(self.pic, (5,5), 0)
-            cv2.imshow('original', self.pic)
-            cv2.imshow('Gaussian', gauBlurImg)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+        elif bid == '2.2':
+            if self.legal[1] >= 1:
+                gauBlurImg = cv2.GaussianBlur(self.pic, (5,5), 0)
+                cv2.imshow('original', self.pic)
+                cv2.imshow('Gaussian', gauBlurImg)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+            else: 
+                self.__msg.setText("1.1 should be done first!")
+                self.__msg.exec_()
 
-        elif bid == '2.3' and self.legal[1] > 0:
-            bilBlurImg = cv2.bilateralFilter(self.pic, 9, 90, 90)
-            cv2.imshow('original', self.pic)
-            cv2.imshow('bilateral', bilBlurImg)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+        elif bid == '2.3':
+            if self.legal[1] >= 1:
+                bilBlurImg = cv2.bilateralFilter(self.pic, 9, 90, 90)
+                cv2.imshow('original', self.pic)
+                cv2.imshow('bilateral', bilBlurImg)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+            else: 
+                self.__msg.setText("1.1 should be done first!")
+                self.__msg.exec_()
 
         #edge detect
-        elif bid == '3.1' and self.legal[2] >= 1:
-            self.legal[2] = 2
-            grayImg = cv2.cvtColor(self.pic, cv2.COLOR_BGR2GRAY)
-            gauKernel = self.__gaussianKer(7)
-            gauBlur = signal.convolve2d(grayImg, gauKernel,  boundary='symm', mode='same')
-            gauBlur = gauBlur.astype(np.uint8)
-            self.__imgCache[0] = gauBlur
-            cv2.imshow('original', grayImg)
-            cv2.imshow('Gaussian', gauBlur)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+        elif bid == '3.1':
+            if self.legal[2] >= 1:
+                self.legal[2] = 2
+                grayImg = cv2.cvtColor(self.pic, cv2.COLOR_BGR2GRAY)
+                gauKernel = self.__gaussianKer(7)
+                gauBlur = signal.convolve2d(grayImg, gauKernel,  boundary='symm', mode='same')
+                gauBlur = gauBlur.astype(np.uint8)
+                self.__imgCache[0] = gauBlur
+                cv2.imshow('original', grayImg)
+                cv2.imshow('Gaussian', gauBlur)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+            else: 
+                self.__msg.setText("1.1 should be done first!")
+                self.__msg.exec_()
 
         elif bid == '3.2' :
             if self.legal[2] >= 2:
+                self.legal[2] = 4 if self.legal[2] == 3 else 3
                 sobelKernel = self.__sobelKer('x')
                 sobelx = signal.convolve2d(self.__imgCache[0], sobelKernel,  boundary='symm', mode='same')
                 self.__imgCache[1] = sobelx
@@ -263,9 +288,13 @@ class MainWindow(QWidget):
                 cv2.imshow('Sobel X', sobelx)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
+            else: 
+                self.__msg.setText("3.1 should be done first!")
+                self.__msg.exec_()
 
         elif bid == '3.3' :
             if self.legal[2] >= 2:
+                self.legal[2] = 4 if self.legal[2] == 3 else 3
                 sobelKernel = self.__sobelKer('y')
                 sobely = signal.convolve2d(self.__imgCache[0], sobelKernel,  boundary='symm', mode='same')
                 self.__imgCache[2] = sobely
@@ -279,18 +308,24 @@ class MainWindow(QWidget):
                 cv2.imshow('Sobel Y', sobely)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
+            else: 
+                self.__msg.setText("3.1 should be done first!")
+                self.__msg.exec_()
 
         elif bid == '3.4' :
-            if self.legal[2] >= 2:
+            if self.legal[2] >= 4:
                 magnitude = np.sqrt(self.__imgCache[1] ** 2 + self.__imgCache[2] ** 2)
                 magnitude = ((magnitude - magnitude.min()) / (magnitude.max() - magnitude.min())) * 255
                 magnitude = magnitude.astype(np.uint8)
                 cv2.imshow('Magnitude', magnitude)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
+            else: 
+                self.__msg.setText("3.2 3.3 should be done first!")
+                self.__msg.exec_()
 
         elif bid == '4.1' :
-            if self.legal[0] >= 1:
+            if self.legal[3] >= 1:
                 rotate = float(self.__rotateText.text())
                 scale = float(self.__scaleText.text())
                 tx = int(self.__TxText.text())
@@ -299,32 +334,53 @@ class MainWindow(QWidget):
                 self.__imgCenter = self.__imgCenter + np.array([tx, ty])
                 h, w = self.pic.shape[:2]
                 center = (self.__imgCenter[0], self.__imgCenter[1])
-                
                 M = np.float32([[1, 0, tx],[0, 1, ty]])
                 res = cv2.warpAffine(self.pic, M, (w,h))
-                
                 M = self.__M(rotate, scale)
                 res = cv2.warpAffine(res, M, (w, h))
                 self.pic = res
-                
                 cv2.imshow('My Image', res)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
-        
+            else: 
+                self.__msg.setText("1.1 should be done first!")
+                self.__msg.exec_()
+
         elif bid == '5.1':
-            print('model create')
+            self.legal[4] = 1
             self.__model = VGG()
             self.__model.showTrainImg()
+            self.__model.setOneHotEncode()
+            self.__model.buildModel()
+
+        elif bid == '5.2':
+            if self.legal[4] >= 1:
+                self.__model.printHyperparameter()
+            else: 
+                self.__msg.setText("5.1 should be done first!")
+                self.__msg.exec_()
 
         elif bid == '5.3':
-            self.__model.buildModel()
-            self.__model.printSummary()
-            self.__model.setOneHotEncode()
+            if self.legal[4] >= 1:
+                self.__model.printSummary()
+            else: 
+                self.__msg.setText("5.1 should be done first!")
+                self.__msg.exec_()
 
         elif bid == '5.4':
-            self.__model.train()
+            if self.legal[4] >= 1:
+                self.__model.getAccLossPlot()
+            else: 
+                self.__msg.setText("5.1 should be done first!")
+                self.__msg.exec_()
 
-
+        elif bid == '5.5':
+            if self.legal[4] >= 1:
+                index = int(self.__testImgIndex.text())
+                self.__model.showTestRes(index)
+            else: 
+                self.__msg.setText("5.1 should be done first!")
+                self.__msg.exec_()
 
     def __M(self, rot, scale):
         center = (self.__imgCenter[0], self.__imgCenter[1])
@@ -336,8 +392,6 @@ class MainWindow(QWidget):
         y = b * center[0] + (1 - a) * center[1]
         return np.float32([[a, b, x], [-b, a, y]])
 
-
-
     def __illegalMsg(self):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Warning)
@@ -346,14 +400,12 @@ class MainWindow(QWidget):
         msg.setWindowTitle("MessageBox demo")
         msg.setDetailedText("The details are as follows:")
         a = msg.show()
-
         
     def __blendShow(self, x):
         dst = cv2.addWeighted(self.__imgCache[0], x / 255, self.__imgCache[1], (255 - x) / 255, 0.0)
         cv2.imshow("blending", dst)
 
     def __gaussianKer(self, size, sigma = np.sqrt(0.5)):
-        #gnit = (1 / (2 * np.pi * sigma**2)) * np.exp(-(x**2 + y**2))
         half = size // 2
         x, y = np.mgrid[-half : half + 1, -half : half + 1]
         gnorm = np.exp(-(x**2 + y**2)) 
@@ -367,8 +419,6 @@ class MainWindow(QWidget):
             return np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
         return None
 
-
-
     def __sumMax(self, sum):
         index = 0
         m = 0
@@ -377,27 +427,6 @@ class MainWindow(QWidget):
                 m = sum[i]
                 index = i
         return index, m
-
-
-
-    def __conv2D(self, img, ker):
-        dst = np.zeros(img.shape, dtype=img.dtype)
-        bh = ker.shape[0] // 2
-        bw = ker.shape[1] // 2
-        ih = img.shape[0]
-        iw = img.shape[1]
-        kerSize = ker.shape[0] * ker.shape[1]
-        for i in range(bw, iw - bw):
-            for j in range(bh, ih - bh):
-                submatrix = img[i-bw:i+bw+1,j-bh:j+bh+1]
-                dst[i][j] = np.sum(submatrix * ker) / kerSize
-                print(str(i) + ' ' + str(j) + ' ' + str(sum))
-        dst[:bw,:] = img[:bw,:]
-        dst[iw-bw:,:] = img[iw-bw:,:]
-        dst[:,:bh] = img[:,:bh]
-        dst[:,ih-bh:] = img[:,ih-bh:]
-        return dst
-
 
     def __resetImgCache(self):
         self.__imgCache = [0] * 8
