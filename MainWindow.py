@@ -184,8 +184,8 @@ class MainWindow(QWidget):
                 rsep = cv2.merge([z, z, r])
                 cv2.imshow("original", self.pic)
                 cv2.imshow("red", rsep)
-                cv2.imshow("ged", gsep)
-                cv2.imshow("bed", bsep)
+                cv2.imshow("green", gsep)
+                cv2.imshow("blue", bsep)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
             else: 
